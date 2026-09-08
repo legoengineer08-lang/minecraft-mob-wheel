@@ -1,0 +1,93 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Minecraft Mob Wheel</title>
+<style>
+body{font-family:system-ui,sans-serif;text-align:center;background:#f4f4f4;margin:0;padding:24px}
+#wheelWrap{position:relative;width:700px;max-width:92vw;margin:auto}
+svg{width:100%;height:auto;display:block;transition:transform 5s cubic-bezier(.12,.72,.15,1);transform-origin:50% 50%}
+#pointer{position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:38px solid #111;z-index:2}
+button{font-size:18px;padding:11px 22px;border:0;border-radius:10px;cursor:pointer;margin:8px}
+#spin{font-weight:700}
+#reset{background:#ddd}
+#result{font-size:28px;font-weight:700;margin:16px}
+#remaining{font-size:17px}
+</style></head>
+<body>
+<h1>🎡 Minecraft Mob Wheel</h1>
+<p>Every mob is removed after it is selected. Reset brings them all back.</p>
+<div id="wheelWrap"><div id="pointer"></div>
+<svg id="wheel" viewBox="0 0 700 700"></svg></div>
+<button id="spin">SPIN THE WHEEL</button>
+<button id="reset">RESET</button>
+<div id="result">Result: —</div>
+<div id="remaining"></div>
+<script>
+const allMobs = ['Allay', 'Armadillo', 'Axolotl', 'Bat', 'Bee', 'Camel', 'Cat', 'Cave Spider', 'Chicken', 'Cod', 'Copper Golem', 'Cow', 'Creeper', 'Dolphin', 'Donkey', 'Drowned', 'Elder Guardian', 'Enderman', 'Endermite', 'Evoker', 'Fox', 'Frog', 'Glow Squid', 'Goat', 'Guardian', 'Happy Ghast', 'Horse', 'Iron Golem', 'Llama', 'Mooshroom', 'Mule', 'Nautilus', 'Ocelot', 'Panda', 'Parrot', 'Phantom', 'Pig', 'Polar Bear', 'Pufferfish', 'Rabbit', 'Ravager', 'Salmon', 'Sheep', 'Shulker', 'Silverfish', 'Skeleton', 'Skeleton Horse', 'Sniffer', 'Snow Golem', 'Spider', 'Squid', 'Stray', 'Tadpole', 'Tropical Fish', 'Turtle', 'Vex', 'Villager', 'Vindicator', 'Wandering Trader', 'Witch', 'Wolf', 'Zombie', 'Zombie Horse', 'Zombie Villager', 'Blaze', 'Ghast', 'Hoglin', 'Husk', 'Magma Cube', 'Piglin', 'Strider', 'Wither Skeleton', 'Zoglin', 'Zombified Piglin'];
+let available = [...allMobs];
+let rotation = 0;
+let busy = false;
+
+const wheel = document.getElementById('wheel');
+const result = document.getElementById('result');
+const remaining = document.getElementById('remaining');
+
+function drawWheel() {
+  const N = available.length;
+  wheel.innerHTML = '';
+  if (!N) {
+    wheel.innerHTML = '<circle cx="350" cy="350" r="300" fill="#ddd"/><text x="350" y="350" text-anchor="middle" dominant-baseline="middle" font-size="28" font-weight="700">ALL MOBS USED!</text>';
+    remaining.textContent = '0 mobs remaining';
+    return;
+  }
+  const colors = [];
+  for (let i=0;i<N;i++) colors.push('#'+((i*0x9e3779+0x336699)&0xffffff).toString(16).padStart(6,'0'));
+  for (let i=0;i<N;i++) {
+    const a0=-Math.PI/2+i*2*Math.PI/N, a1=-Math.PI/2+(i+1)*2*Math.PI/N;
+    const r=300, cx=350, cy=350;
+    const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+    const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+    const mid=(a0+a1)/2;
+    const tx=cx+r*.62*Math.cos(mid), ty=cy+r*.62*Math.sin(mid);
+    const ns='http://www.w3.org/2000/svg';
+    const p=document.createElementNS(ns,'path');
+    p.setAttribute('d',`M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1} Z`);
+    p.setAttribute('fill',colors[i]); p.setAttribute('stroke','white'); p.setAttribute('stroke-width','1');
+    wheel.appendChild(p);
+    const t=document.createElementNS(ns,'text');
+    t.setAttribute('x',tx); t.setAttribute('y',ty); t.setAttribute('text-anchor','middle');
+    t.setAttribute('dominant-baseline','middle'); t.setAttribute('font-size','8'); t.setAttribute('fill','white');
+    t.setAttribute('transform',`rotate(${mid*180/Math.PI+90} ${tx} ${ty})`);
+    t.textContent=available[i]; wheel.appendChild(t);
+  }
+  const ns='http://www.w3.org/2000/svg';
+  const c=document.createElementNS(ns,'circle'); c.setAttribute('cx',350); c.setAttribute('cy',350); c.setAttribute('r',38); c.setAttribute('fill','white'); c.setAttribute('stroke','#111'); c.setAttribute('stroke-width',4); wheel.appendChild(c);
+  const t=document.createElementNS(ns,'text'); t.setAttribute('x',350); t.setAttribute('y',350); t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','middle'); t.setAttribute('font-size',16); t.setAttribute('font-weight',700); t.textContent='SPIN'; wheel.appendChild(t);
+  remaining.textContent=available.length+' mob'+(available.length===1?'':'s')+' remaining';
+}
+
+function spin() {
+  if (busy || available.length===0) return;
+  busy=true;
+  const i=Math.floor(Math.random()*available.length);
+  const target=360*6+(360-(i+.5)*360/available.length);
+  rotation += target;
+  result.textContent='Spinning...';
+  wheel.style.transform=`rotate(${rotation}deg)`;
+  setTimeout(()=>{
+    const picked=available.splice(i,1)[0];
+    result.textContent='Result: '+picked;
+    drawWheel();
+    busy=false;
+  },5100);
+}
+
+document.getElementById('spin').onclick=spin;
+document.getElementById('reset').onclick=()=>{
+  if (busy) return;
+  available=[...allMobs];
+  rotation=0;
+  wheel.style.transform='rotate(0deg)';
+  result.textContent='Result: —';
+  drawWheel();
+};
+drawWheel();
+</script></body></html>
